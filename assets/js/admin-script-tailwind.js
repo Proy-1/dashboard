@@ -46,18 +46,51 @@ function initializeDashboard() {
     setupDropdown();
     initializeBackendConnection();
     loadDashboardData();
+    setupPeriodicStatusCheck();
 }
 
 // Initialize backend connection
 async function initializeBackendConnection() {
-    // API Service will automatically initialize and check connection
-    // Add backend status indicator to header
-    const header = document.querySelector('.main-content .bg-white.shadow-sm');
-    if (header) {
-        const statusContainer = document.createElement('div');
-        statusContainer.id = 'backend-status';
-        statusContainer.className = 'inline-block ml-4';
-        header.querySelector('.flex.items-center.justify-between').appendChild(statusContainer);
+    // Wait a bit to ensure DOM is fully ready
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Ensure status element exists
+    let statusElement = document.getElementById('backend-status');
+    if (!statusElement) {
+        return;
+    }
+    
+    // Set initial loading status
+    statusElement.innerHTML = `
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <i class="fas fa-spinner fa-spin mr-1"></i> Connecting...
+        </span>
+    `;
+    
+    // Wait for API Service to be available
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    while (attempts < maxAttempts && typeof apiService === 'undefined') {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+    }
+    
+    if (typeof apiService === 'undefined') {
+        statusElement.innerHTML = `
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <i class="fas fa-exclamation-circle mr-1"></i> Service Error
+            </span>
+        `;
+        return;
+    }
+    
+    // Force a fresh health check with additional delay
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await apiService.checkConnectionStatus();
+    } catch (error) {
+        console.error('Connection check failed:', error);
     }
 }
 
@@ -67,10 +100,26 @@ async function loadDashboardData() {
         // Load products and update stats
         const products = await apiService.getProducts();
         updateDashboardStats(products);
+        
+        // If we're on the products page, load the table
+        const currentPage = document.querySelector('.page-content.active');
+        if (currentPage && currentPage.id === 'products-page') {
+            await apiService.loadProductsTable();
+        }
     } else {
         console.warn('API Service not loaded, using sample data');
         initializeSampleData();
     }
+}
+
+// Setup periodic backend status check
+function setupPeriodicStatusCheck() {
+    // Check every 30 seconds
+    setInterval(async () => {
+        if (typeof apiService !== 'undefined') {
+            await apiService.checkConnectionStatus();
+        }
+    }, 30000);
 }
 
 // Sidebar toggle functionality
@@ -528,6 +577,30 @@ function initializeSampleData() {
             }
         ];
         localStorage.setItem('products', JSON.stringify(sampleProducts));
+    }
+}
+
+// Manual refresh backend status
+async function refreshBackendStatus() {
+    const statusElement = document.getElementById('backend-status');
+    if (statusElement) {
+        statusElement.innerHTML = `
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <i class="fas fa-spinner fa-spin mr-1"></i> Checking...
+            </span>
+        `;
+    }
+    
+    if (typeof apiService !== 'undefined') {
+        await apiService.checkConnectionStatus();
+    } else {
+        if (statusElement) {
+            statusElement.innerHTML = `
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Service Error
+                </span>
+            `;
+        }
     }
 }
 

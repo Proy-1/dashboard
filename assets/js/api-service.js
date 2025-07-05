@@ -21,6 +21,9 @@ class APIService {
     ======================================== */
     
     async init() {
+        // Add delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         try {
             await this.healthCheck();
             this.isConnected = true;
@@ -28,21 +31,61 @@ class APIService {
             this.showConnectionStatus(true);
         } catch (error) {
             this.isConnected = false;
-            console.error('❌ Backend connection failed:', error);
+            console.error('❌ Backend connection failed:', error.message);
             this.showConnectionStatus(false);
         }
     }
 
-    async healthCheck() {
-        const response = await fetch(`${this.baseURL}/health`);
-        if (!response.ok) {
-            throw new Error('Backend health check failed');
+    async checkConnectionStatus() {
+        try {
+            await this.healthCheck();
+            this.isConnected = true;
+            this.showConnectionStatus(true);
+            return true;
+        } catch (error) {
+            this.isConnected = false;
+            console.error('Backend connection failed:', error.message);
+            this.showConnectionStatus(false);
+            return false;
         }
-        return await response.json();
+    }
+
+    async healthCheck() {
+        const url = `${this.baseURL}${this.endpoints.HEALTH || '/health'}`;
+        
+        try {
+            // Use simple fetch with timeout fallback
+            const fetchWithTimeout = (url, options, timeout = 5000) => {
+                return Promise.race([
+                    fetch(url, options),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Request timeout')), timeout)
+                    )
+                ]);
+            };
+            
+            const response = await fetchWithTimeout(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Health check failed with status: ${response.status}`);
+            }
+            
+            return await response.json();
+            
+        } catch (error) {
+            throw error;
+        }
     }
 
     showConnectionStatus(connected) {
         const statusElement = document.getElementById('backend-status');
+        
         if (statusElement) {
             if (connected) {
                 statusElement.innerHTML = `
@@ -67,7 +110,7 @@ class APIService {
     // GET: Ambil semua produk
     async getProducts() {
         try {
-            const response = await fetch(`${this.baseURL}/products`);
+            const response = await fetch(`${this.baseURL}${this.endpoints.PRODUCTS || '/products'}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -76,7 +119,7 @@ class APIService {
             return products;
         } catch (error) {
             console.error('Error fetching products:', error);
-            this.showNotification('Error mengambil data produk', 'error');
+            this.showNotification(this.errors.NETWORK_ERROR || 'Error mengambil data produk', 'error');
             return [];
         }
     }

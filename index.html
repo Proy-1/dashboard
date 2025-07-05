@@ -119,9 +119,17 @@
         <!-- Top Navigation -->
         <nav class="bg-white border-b border-gray-200 shadow-sm">
             <div class="px-4 py-3 flex items-center justify-between">
-                <button class="text-gray-600 hover:text-gray-800 focus:outline-none mr-3" id="sidebarToggle">
-                    <i class="fas fa-bars text-lg"></i>
-                </button>
+                <div class="flex items-center">
+                    <button class="text-gray-600 hover:text-gray-800 focus:outline-none mr-3" id="sidebarToggle">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <div id="backend-status" class="ml-4">
+                        <!-- Backend status will be inserted here -->
+                    </div>
+                    <button onclick="refreshBackendStatus()" class="ml-2 text-sm text-blue-600 hover:text-blue-800" title="Refresh Backend Status">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
                 
                 <div class="relative">
                     <div class="dropdown">
@@ -162,7 +170,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="text-xs font-bold text-primary-500 uppercase mb-1">Total Produk</div>
-                                <div class="text-2xl font-bold text-gray-800">1,234</div>
+                                <div id="total-products" class="text-2xl font-bold text-gray-800">0</div>
                             </div>
                             <div class="text-gray-300">
                                 <i class="fas fa-box text-3xl"></i>
@@ -173,8 +181,8 @@
                     <div class="bg-white rounded-xl shadow-sm border-l-4 border-success-500 p-6 hover:shadow-md transition-shadow duration-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="text-xs font-bold text-success-500 uppercase mb-1">Pesanan Hari Ini</div>
-                                <div class="text-2xl font-bold text-gray-800">89</div>
+                                <div class="text-xs font-bold text-success-500 uppercase mb-1">Total Pesanan</div>
+                                <div id="total-orders" class="text-2xl font-bold text-gray-800">0</div>
                             </div>
                             <div class="text-gray-300">
                                 <i class="fas fa-shopping-cart text-3xl"></i>
@@ -185,8 +193,8 @@
                     <div class="bg-white rounded-xl shadow-sm border-l-4 border-info-500 p-6 hover:shadow-md transition-shadow duration-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="text-xs font-bold text-info-500 uppercase mb-1">Pendapatan Bulan Ini</div>
-                                <div class="text-2xl font-bold text-gray-800">Rp 45.6M</div>
+                                <div class="text-xs font-bold text-info-500 uppercase mb-1">Total Pendapatan</div>
+                                <div id="total-revenue" class="text-2xl font-bold text-gray-800">Rp 0</div>
                             </div>
                             <div class="text-gray-300">
                                 <i class="fas fa-dollar-sign text-3xl"></i>
@@ -197,7 +205,15 @@
                     <div class="bg-white rounded-xl shadow-sm border-l-4 border-warning-500 p-6 hover:shadow-md transition-shadow duration-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="text-xs font-bold text-warning-500 uppercase mb-1">Pelanggan Aktif</div>
+                                <div class="text-xs font-bold text-warning-500 uppercase mb-1">Total Pelanggan</div>
+                                <div id="total-customers" class="text-2xl font-bold text-gray-800">0</div>
+                            </div>
+                            <div class="text-gray-300">
+                                <i class="fas fa-users text-3xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                                 <div class="text-2xl font-bold text-gray-800">2,156</div>
                             </div>
                             <div class="text-gray-300">
