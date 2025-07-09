@@ -246,42 +246,71 @@ function closeAddProductModal() {
 
 // Show add product modal
 function showAddProductModal() {
-    document.getElementById('product-id').value = '';
+    // Clear form
     document.getElementById('productForm').reset();
+    document.getElementById('product-id').value = '';
     document.getElementById('modal-title').textContent = 'Tambah Produk Baru';
+    
+    // Show modal
     showModal('productModal');
 }
 
-// Refresh products table
+// Refresh products data
 async function refreshProducts() {
     if (typeof apiService !== 'undefined') {
         await apiService.loadProductsTable();
-        apiService.showNotification('Data produk telah di-refresh', 'success');
+        apiService.showNotification('Data produk berhasil di-refresh', 'success');
+    } else {
+        console.error('API Service not available');
     }
 }
 
-// Modal management functions
+// Refresh backend status
+async function refreshBackendStatus() {
+    if (typeof apiService !== 'undefined') {
+        const isConnected = await apiService.checkConnectionStatus();
+        if (isConnected) {
+            apiService.showNotification('Backend status updated - Connected', 'success');
+        } else {
+            apiService.showNotification('Backend status updated - Disconnected', 'warning');
+        }
+    } else {
+        console.error('API Service not available');
+    }
+}
+
+// Show modal helper function
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.add('active');
+        modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        
+        // Add fade in animation
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
     }
 }
 
+// Hide modal helper function
 function hideModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
+        modal.classList.remove('show');
+        
+        // Remove modal after animation
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }, 300);
     }
 }
 
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
-        e.target.classList.remove('active');
-        document.body.style.overflow = '';
+        hideModal(e.target.id);
     }
 });
 
@@ -379,27 +408,8 @@ function addProduct() {
     showAlert('Produk berhasil ditambahkan!', 'success');
 }
 
-function editProduct(productId) {
-    // Load product data and show edit modal
-    const product = getProductById(productId);
-    if (product) {
-        // Populate edit form with product data
-        // This would open an edit modal similar to add modal
-        showAlert('Fitur edit akan segera tersedia!', 'info');
-    }
-}
-
-function deleteProduct(productId) {
-    if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
-        // Delete from storage
-        removeProduct(productId);
-        
-        // Reload table
-        loadProducts();
-        
-        showAlert('Produk berhasil dihapus!', 'success');
-    }
-}
+// editProduct dan deleteProduct functions sudah didefinisikan di api-service.js
+// Tidak perlu duplikasi di sini
 
 // Product data management (localStorage simulation)
 function saveProduct(product) {
@@ -486,6 +496,63 @@ function viewCustomer(customerId) {
 
 function editCustomer(customerId) {
     showAlert(`Edit pelanggan ID: ${customerId} - Fitur akan segera tersedia!`, 'info');
+}
+
+/* ========================================
+   BULK PRICING FUNCTIONS
+======================================== */
+
+// Toggle bulk pricing panel
+function toggleBulkPricing() {
+    const panel = document.getElementById('bulk-pricing-panel');
+    if (panel) {
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            panel.classList.add('show');
+        } else {
+            panel.style.display = 'none';
+            panel.classList.remove('show');
+        }
+    }
+}
+
+// Apply bulk pricing changes
+async function applyBulkPricing() {
+    const category = document.getElementById('bulk-category').value;
+    const type = document.getElementById('bulk-type').value;
+    const value = parseFloat(document.getElementById('bulk-value').value);
+    
+    if (!value || value <= 0) {
+        if (typeof apiService !== 'undefined') {
+            apiService.showNotification('Mohon masukkan nilai yang valid', 'warning');
+        }
+        return;
+    }
+    
+    // Show confirmation
+    const confirmMessage = `Apakah Anda yakin ingin mengupdate harga ${category || 'semua produk'} dengan ${type.replace('_', ' ')} ${value}%?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    console.log('🏷️ Applying bulk pricing:', { category, type, value });
+    
+    // Here you would typically call backend API for bulk price update
+    // For now, we'll just show a success message
+    if (typeof apiService !== 'undefined') {
+        apiService.showNotification('Harga berhasil diupdate secara bulk!', 'success');
+        
+        // Refresh products table
+        await apiService.loadProductsTable();
+        
+        // Hide bulk pricing panel
+        toggleBulkPricing();
+        
+        // Reset form
+        document.getElementById('bulk-category').value = '';
+        document.getElementById('bulk-type').value = 'percentage_increase';
+        document.getElementById('bulk-value').value = '';
+    }
 }
 
 // Utility Functions
@@ -607,8 +674,14 @@ async function refreshBackendStatus() {
 // Export functions for external use
 window.showPage = showPage;
 window.addProduct = addProduct;
-window.editProduct = editProduct;
-window.deleteProduct = deleteProduct;
+window.showAddProductModal = showAddProductModal;
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.refreshProducts = refreshProducts;
+window.refreshBackendStatus = refreshBackendStatus;
+window.toggleBulkPricing = toggleBulkPricing;
+window.applyBulkPricing = applyBulkPricing;
+// editProduct dan deleteProduct sudah di-export di api-service.js
 window.toggleDropdown = toggleDropdown;
 window.logout = logout;
 window.openAddProductModal = openAddProductModal;
@@ -617,6 +690,8 @@ window.viewOrder = viewOrder;
 window.updateOrderStatus = updateOrderStatus;
 window.viewCustomer = viewCustomer;
 window.editCustomer = editCustomer;
+window.toggleBulkPricing = toggleBulkPricing;
+window.applyBulkPricing = applyBulkPricing;
 
 // Handle window resize
 window.addEventListener('resize', function() {

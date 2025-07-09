@@ -127,14 +127,32 @@ class APIService {
     // GET: Ambil satu produk berdasarkan ID
     async getProduct(productId) {
         try {
+            console.log('📡 API call: GET', `${this.baseURL}/products/${productId}`);
             const response = await fetch(`${this.baseURL}/products/${productId}`);
+            
+            console.log('📡 Response status:', response.status);
+            
             if (!response.ok) {
+                if (response.status === 404) {
+                    console.log('❌ Product not found (404)');
+                    return null;
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            
+            const product = await response.json();
+            console.log('✅ Product received:', product);
+            return product;
         } catch (error) {
-            console.error('Error fetching product:', error);
-            this.showNotification('Error mengambil data produk', 'error');
+            console.error('❌ Error fetching product:', error);
+            
+            // Check if it's a network error (backend not running)
+            if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+                console.error('🔌 Backend seems to be offline');
+                this.showNotification('Backend tidak dapat dijangkau. Pastikan server berjalan di localhost:5000', 'error');
+            } else {
+                this.showNotification('Error mengambil data produk: ' + error.message, 'error');
+            }
             return null;
         }
     }
@@ -233,6 +251,60 @@ class APIService {
             console.error('Error uploading image:', error);
             this.showNotification('Error mengupload gambar', 'error');
             return null;
+        }
+    }
+
+    /* ========================================
+       AUTHENTICATION API METHODS
+    ======================================== */
+
+    // POST: Login admin
+    async loginAdmin(username, password) {
+        try {
+            const response = await fetch(`${this.baseURL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login gagal');
+            }
+
+            console.log('✅ Login successful');
+            return { success: true, message: data.message };
+        } catch (error) {
+            console.error('Error during login:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    // POST: Register admin (if needed)
+    async registerAdmin(username, password) {
+        try {
+            const response = await fetch(`${this.baseURL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Registrasi gagal');
+            }
+
+            console.log('✅ Registration successful');
+            return { success: true, message: data.message };
+        } catch (error) {
+            console.error('Error during registration:', error);
+            return { success: false, message: error.message };
         }
     }
 
@@ -342,7 +414,7 @@ class APIService {
         // Show loading
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-8">
+                <td colspan="5" class="text-center py-8">
                     <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
                     <p class="mt-2 text-gray-500">Memuat data produk...</p>
                 </td>
@@ -354,10 +426,10 @@ class APIService {
         if (products.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center py-8">
+                    <td colspan="5" class="text-center py-8">
                         <i class="fas fa-box-open text-4xl text-gray-300 mb-2"></i>
                         <p class="text-gray-500">Belum ada produk</p>
-                        <button onclick="showModal('productModal')" class="btn btn-primary btn-sm mt-2">
+                        <button onclick="showAddProductModal()" class="btn btn-primary btn-sm mt-2">
                             <i class="fas fa-plus mr-1"></i> Tambah Produk Pertama
                         </button>
                     </td>
@@ -440,25 +512,48 @@ const apiService = new APIService();
 
 // Function untuk edit produk
 async function editProduct(productId) {
-    const product = await apiService.getProduct(productId);
-    if (product) {
-        // Populate form dengan data produk
-        document.getElementById('product-id').value = product._id;
-        document.getElementById('product-name').value = product.name;
-        document.getElementById('product-price').value = product.price;
-        document.getElementById('product-description').value = product.description;
-        document.getElementById('product-image-url').value = product.image_url || '';
+    console.log('🔧 Edit product clicked:', productId);
+    
+    // Validasi input
+    if (!productId) {
+        console.error('❌ Product ID is required');
+        apiService.showNotification('ID produk tidak valid', 'error');
+        return;
+    }
+    
+    try {
+        console.log('📡 Fetching product data from API...');
+        const product = await apiService.getProduct(productId);
         
-        // Update modal title
-        document.getElementById('modal-title').textContent = 'Edit Produk';
-        
-        // Show modal
-        showModal('productModal');
+        if (product && product._id) {
+            console.log('✅ Product data loaded:', product);
+            
+            // Populate form dengan data produk
+            document.getElementById('product-id').value = product._id || '';
+            document.getElementById('product-name').value = product.name || '';
+            document.getElementById('product-price').value = product.price || '';
+            document.getElementById('product-description').value = product.description || '';
+            document.getElementById('product-image-url').value = product.image_url || '';
+            
+            // Update modal title
+            document.getElementById('modal-title').textContent = 'Edit Produk';
+            
+            // Show modal
+            console.log('🎭 Opening edit modal...');
+            showModal('productModal');
+        } else {
+            console.error('❌ Product not found or invalid data:', product);
+            apiService.showNotification('Produk tidak ditemukan atau data tidak valid', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Error in editProduct:', error);
+        apiService.showNotification('Error: ' + error.message, 'error');
     }
 }
 
 // Function untuk konfirmasi hapus produk
 function confirmDeleteProduct(productId, productName) {
+    console.log('🗑️ Delete product clicked:', productId, productName);
     if (confirm(`Apakah Anda yakin ingin menghapus produk "${productName}"?`)) {
         deleteProduct(productId);
     }
@@ -466,10 +561,17 @@ function confirmDeleteProduct(productId, productName) {
 
 // Function untuk hapus produk
 async function deleteProduct(productId) {
-    const success = await apiService.deleteProduct(productId);
-    if (success) {
-        // Reload table
-        await apiService.loadProductsTable();
+    console.log('🗑️ Deleting product:', productId);
+    try {
+        const success = await apiService.deleteProduct(productId);
+        if (success) {
+            console.log('✅ Product deleted successfully');
+            // Reload table
+            await apiService.loadProductsTable();
+        }
+    } catch (error) {
+        console.error('❌ Error deleting product:', error);
+        apiService.showNotification('Error menghapus produk: ' + error.message, 'error');
     }
 }
 
@@ -532,6 +634,9 @@ async function uploadProductImage() {
     }
 }
 
+// showModal dan hideModal sudah didefinisikan di admin-script-tailwind.js
+// Tidak perlu duplikasi di sini
+
 // Auto-load products when page loads
 document.addEventListener('DOMContentLoaded', function() {
     // Load products table if we're on the products page
@@ -539,3 +644,10 @@ document.addEventListener('DOMContentLoaded', function() {
         apiService.loadProductsTable();
     }
 });
+
+// Export functions to window object for global access
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.confirmDeleteProduct = confirmDeleteProduct;
+window.saveProduct = saveProduct;
+window.uploadProductImage = uploadProductImage;

@@ -50,6 +50,10 @@ const API_ENDPOINTS = {
     // Health check
     HEALTH: '/health',
     
+    // Authentication
+    LOGIN: '/login',
+    REGISTER: '/register',
+    
     // Products
     PRODUCTS: '/products',
     PRODUCT_BY_ID: (id) => `/products/${id}`,

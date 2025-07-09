@@ -82,7 +82,7 @@
                 </button>
             </form>
             
-            <div class="demo-credentials">
+            <!-- <div class="demo-credentials">
                 <div class="demo-credentials-title">
                     <i class="fas fa-info-circle"></i>Demo Credentials:
                 </div>
@@ -92,28 +92,56 @@
                 <div class="demo-credential-item">
                     <span class="demo-credential-label">Password:</span> admin123
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
-            // Demo authentication
-            if (email === 'admin@ecommerce.com' && password === 'admin123') {
-                // Set login session
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', email);
-                
-                // Redirect to dashboard
-                window.location.href = 'index.html';
-            } else {
-                // Show error message
-                showError('Email atau password salah!');
+            // Show loading state
+            const submitButton = document.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            submitButton.disabled = true;
+            
+            try {
+                // Try MongoDB authentication first
+                if (typeof apiService !== 'undefined') {
+                    const result = await apiService.loginAdmin(email, password);
+                    
+                    if (result.success) {
+                        // Set login session
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', email);
+                        
+                        // Redirect to dashboard
+                        window.location.href = 'index.html';
+                        return;
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } else {
+                    // Fallback to demo authentication if API service not available
+                    if (email === 'admin@ecommerce.com' && password === 'admin123') {
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', email);
+                        window.location.href = 'index.html';
+                        return;
+                    } else {
+                        throw new Error('Email atau password salah!');
+                    }
+                }
+            } catch (error) {
+                showError(error.message || 'Login gagal. Silakan coba lagi.');
+            } finally {
+                // Reset button state
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
             }
         });
         
@@ -146,12 +174,10 @@
         if (localStorage.getItem('isLoggedIn') === 'true') {
             window.location.href = 'index.html';
         }
-        
-        // Auto-fill demo credentials for easier testing
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('email').value = 'admin@ecommerce.com';
-            document.getElementById('password').value = 'admin123';
-        });
     </script>
+    
+    <!-- Load API Service for authentication -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api-service.js"></script>
 </body>
 </html>
